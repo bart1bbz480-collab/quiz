@@ -679,14 +679,12 @@ function ThanksScreen({ quiz, lang, onRestart }: ThanksScreenProps) {
         {(thanksImageUrl || quiz.campaign_url) && (
           <div className="flex flex-col landscape:flex-row items-center justify-center gap-6 w-full">
             {thanksImageUrl && (
-              <div className="w-full landscape:flex-1 rounded-2xl overflow-hidden max-h-48 landscape:max-h-56">
-                <img
-                  src={thanksImageUrl}
-                  alt=""
-                  className="w-full h-full object-cover"
-                  draggable={false}
-                />
-              </div>
+              <img
+                src={thanksImageUrl}
+                alt=""
+                className="w-full landscape:flex-1 rounded-2xl max-h-56 landscape:max-h-64 object-contain"
+                draggable={false}
+              />
             )}
             {quiz.campaign_url && (
               <div className="flex flex-col items-center gap-3 flex-shrink-0">

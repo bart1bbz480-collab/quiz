@@ -235,7 +235,7 @@ export function QuizPreview({ data }: { data: PreviewData }) {
                   <img
                     src={data.thanks_image_url}
                     alt="Bedankafbeelding"
-                    className="w-full sm:flex-1 max-h-44 object-cover rounded-lg border border-border"
+                    className="w-full sm:flex-1 max-h-44 object-contain rounded-lg border border-border"
                   />
                 )}
                 {data.campaign_url && (
