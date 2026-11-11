@@ -41,7 +41,7 @@ export function useActivateQuiz() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (quizId: string) => {
-      const { error } = await supabase.rpc('activate_quiz', { quiz_id: quizId })
+      const { error } = await supabase.rpc('activate_quiz', { p_quiz_id: quizId })
       if (error) throw error
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['quizzes'] }),
