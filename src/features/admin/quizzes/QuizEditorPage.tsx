@@ -315,9 +315,20 @@ function QuestionCard({ q, idx, total, locked, onChange, onRemove, onMoveUp, onM
           <Select
             value={q.type}
             disabled={locked}
-            onValueChange={(val) =>
-              onChange({ ...q, type: val as QuestionType })
-            }
+            onValueChange={(val) => {
+              const newType = val as QuestionType
+              const newOptions = newType === 'yes_no_unknown'
+                ? [
+                    { label_nl: 'Ja', label_fr: 'Oui', label_en: 'Yes', image_path: null },
+                    { label_nl: 'Nee', label_fr: 'Non', label_en: 'No', image_path: null },
+                    { label_nl: 'Weet ik niet', label_fr: 'Je ne sais pas', label_en: "I don't know", image_path: null },
+                  ]
+                : [
+                    { label_nl: '', label_fr: '', label_en: '', image_path: null },
+                    { label_nl: '', label_fr: '', label_en: '', image_path: null },
+                  ]
+              onChange({ ...q, type: newType, options: newOptions })
+            }}
           >
             <SelectTrigger className="w-full">
               <SelectValue />
