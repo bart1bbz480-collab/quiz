@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { QRCodeSVG } from 'qrcode.react'
 import { Button } from '@/components/ui/button'
 import { getPublicImageUrl } from '@/lib/image'
 import { cn } from '@/lib/utils'
@@ -11,6 +12,7 @@ export interface PreviewData {
   thanks_text_fr: string
   thanks_text_en: string
   thanks_image_path: string | null
+  campaign_url: string
   questions: Array<{
     type: QuestionType
     text_nl: string
@@ -234,6 +236,14 @@ export function QuizPreview({ data }: { data: PreviewData }) {
                 <span className="text-muted-foreground italic">Geen bedanktekst ingevoerd</span>
               }
             </p>
+            {data.campaign_url && (
+              <div className="flex flex-col items-center gap-2">
+                <p className="text-sm text-muted-foreground">Scan de QR-code</p>
+                <div className="p-3 bg-white rounded-xl shadow-sm border border-border">
+                  <QRCodeSVG value={data.campaign_url} size={160} />
+                </div>
+              </div>
+            )}
             <Button type="button" onClick={reset}>
               Opnieuw beginnen
             </Button>
