@@ -10,6 +10,19 @@ import { t, languageLabels, languageFlags } from '@/i18n'
 import type { Quiz, Question, Option, Language, InterviewPayload } from '@/types'
 import { ABORT_HOLD_MS, ANSWER_FEEDBACK_MS } from '@/types'
 
+// ─── Vaste opties voor ja/nee/weet ik niet ────────────────────────────────────
+
+const FIXED_YES_NO: Option[] = [
+  { id: 'yn-1', question_id: '', position: 1, label_nl: 'Ja',           label_fr: 'Oui', label_en: 'Yes',          image_path: null },
+  { id: 'yn-2', question_id: '', position: 2, label_nl: 'Nee',          label_fr: 'Non', label_en: 'No',           image_path: null },
+  { id: 'yn-3', question_id: '', position: 3, label_nl: 'Weet ik niet', label_fr: 'Je ne sais pas', label_en: "I don't know", image_path: null },
+]
+
+function getQuestionOptions(question: Question): Option[] {
+  if (question.type === 'yes_no_unknown') return FIXED_YES_NO
+  return question.options
+}
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type SurveyStep = 'lang' | 'question' | 'thanks'
@@ -53,6 +66,7 @@ function hasAllTranslations(quiz: Quiz, lang: Language): boolean {
   return quiz.questions.every((q) => {
     const hasQ = lang === 'fr' ? !!q.text_fr : !!q.text_en
     if (!hasQ) return false
+    if (q.type === 'yes_no_unknown') return true // vaste vertalingen
     return q.options.every((o) => (lang === 'fr' ? !!o.label_fr : !!o.label_en))
   })
 }
@@ -576,7 +590,7 @@ function QuestionScreen({
 
         {/* Antwoordopties */}
         <div className="flex flex-col gap-3">
-          {question.options.map((option) => (
+          {getQuestionOptions(question).map((option) => (
             <OptionCard
               key={option.id}
               option={option}
