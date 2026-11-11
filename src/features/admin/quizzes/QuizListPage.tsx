@@ -109,7 +109,9 @@ export function QuizListPage() {
                     {quiz.is_locked && (
                       <Badge variant="warning">Vergrendeld</Badge>
                     )}
-                    <span className="text-xs text-muted-foreground">v{quiz.version}</span>
+                    {quiz.version > 1 && (
+                      <span className="text-xs text-muted-foreground">v{quiz.version}</span>
+                    )}
                   </div>
                 </div>
 

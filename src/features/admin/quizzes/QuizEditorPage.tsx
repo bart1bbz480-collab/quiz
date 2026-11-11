@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowUp, ArrowDown, Trash2, Plus, Image, X, Lock } from 'lucide-react'
@@ -17,6 +17,7 @@ import type { Quiz, QuestionType } from '@/types'
 import { MAX_QUESTIONS, MAX_OPTIONS, MIN_OPTIONS } from '@/types'
 import { QuizPreview } from './QuizPreview'
 import type { PreviewData } from './QuizPreview'
+import { translate } from '@/lib/translate'
 
 // ─── Local draft types ─────────────────────────────────────────────────────────
 
@@ -143,6 +144,21 @@ interface OptionRowProps {
 }
 
 function OptionRow({ opt, idx, total, locked, onChange, onRemove, onMoveUp, onMoveDown }: OptionRowProps) {
+  const [translating, setTranslating] = useState(false)
+
+  const autoTranslate = useCallback(async () => {
+    if (!opt.label_nl.trim() || locked) return
+    setTranslating(true)
+    try {
+      const [fr, en] = await Promise.all([
+        opt.label_fr ? Promise.resolve(opt.label_fr) : translate(opt.label_nl, 'nl|fr'),
+        opt.label_en ? Promise.resolve(opt.label_en) : translate(opt.label_nl, 'nl|en'),
+      ])
+      onChange({ ...opt, label_fr: fr, label_en: en })
+    } catch { /* stil falen */ }
+    finally { setTranslating(false) }
+  }, [opt, onChange, locked])
+
   return (
     <Card className="mb-2">
       <CardContent className="p-3">
@@ -183,11 +199,20 @@ function OptionRow({ opt, idx, total, locked, onChange, onRemove, onMoveUp, onMo
         </div>
 
         <Tabs defaultValue="nl">
-          <TabsList className="h-8">
-            <TabsTrigger value="nl" className="text-xs px-2 py-1">NL</TabsTrigger>
-            <TabsTrigger value="fr" className="text-xs px-2 py-1">FR</TabsTrigger>
-            <TabsTrigger value="en" className="text-xs px-2 py-1">EN</TabsTrigger>
-          </TabsList>
+          <div className="flex items-center justify-between">
+            <TabsList className="h-8">
+              <TabsTrigger value="nl" className="text-xs px-2 py-1">NL</TabsTrigger>
+              <TabsTrigger value="fr" className="text-xs px-2 py-1">FR</TabsTrigger>
+              <TabsTrigger value="en" className="text-xs px-2 py-1">EN</TabsTrigger>
+            </TabsList>
+            {!locked && opt.label_nl && (
+              <Button type="button" variant="ghost" size="sm" className="h-6 text-xs px-2"
+                disabled={translating} onClick={autoTranslate}
+              >
+                {translating ? 'Vertalen…' : 'Vertaal'}
+              </Button>
+            )}
+          </div>
           <TabsContent value="nl" className="mt-2">
             <Input
               placeholder="Label NL"
@@ -248,6 +273,21 @@ function newOption(): OptionDraft {
 }
 
 function QuestionCard({ q, idx, total, locked, onChange, onRemove, onMoveUp, onMoveDown }: QuestionCardProps) {
+  const [translating, setTranslating] = useState<'question' | null>(null)
+
+  const autoTranslateQuestion = useCallback(async () => {
+    if (!q.text_nl.trim() || locked) return
+    setTranslating('question')
+    try {
+      const [fr, en] = await Promise.all([
+        q.text_fr ? Promise.resolve(q.text_fr) : translate(q.text_nl, 'nl|fr'),
+        q.text_en ? Promise.resolve(q.text_en) : translate(q.text_nl, 'nl|en'),
+      ])
+      onChange({ ...q, text_fr: fr, text_en: en })
+    } catch { /* stil falen */ }
+    finally { setTranslating(null) }
+  }, [q, onChange, locked])
+
   const addOption = () => {
     if (q.options.length >= MAX_OPTIONS) return
     onChange({ ...q, options: [...q.options, newOption()] })
@@ -341,7 +381,17 @@ function QuestionCard({ q, idx, total, locked, onChange, onRemove, onMoveUp, onM
         </div>
 
         <div>
-          <Label className="mb-1.5 block text-sm">Vraagtekst</Label>
+          <div className="flex items-center justify-between mb-1.5">
+            <Label className="text-sm">Vraagtekst</Label>
+            {!locked && q.text_nl && (
+              <Button type="button" variant="ghost" size="sm" className="h-6 text-xs px-2"
+                disabled={translating === 'question'}
+                onClick={autoTranslateQuestion}
+              >
+                {translating === 'question' ? 'Vertalen…' : 'Vertaal NL → FR/EN'}
+              </Button>
+            )}
+          </div>
           <Tabs defaultValue="nl">
             <TabsList>
               <TabsTrigger value="nl">NL</TabsTrigger>
