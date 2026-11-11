@@ -381,7 +381,7 @@ export function SurveyShell() {
     )
 
     return (
-      <div className="min-h-screen flex flex-col bg-background">
+      <div className="min-h-screen overflow-y-auto flex flex-col bg-background">
         {/* Discrete terug-knop linksboven */}
         <div className="p-4">
           <button
@@ -393,7 +393,7 @@ export function SurveyShell() {
           </button>
         </div>
 
-        <div className="flex-1 flex flex-col items-center justify-center gap-8 px-6">
+        <div className="flex-1 flex flex-col items-center justify-center gap-8 px-6 py-4">
           <h1 className="text-2xl font-semibold text-center text-foreground">
             {t('nl', 'chooseLanguage')} / {t('fr', 'chooseLanguage')} / {t('en', 'chooseLanguage')}
           </h1>
@@ -490,7 +490,7 @@ function QuestionScreen({
 
   return (
     <div
-      className="min-h-screen flex flex-col bg-background overflow-hidden"
+      className="min-h-screen flex flex-col bg-background"
       style={{
         userSelect: 'none',
         touchAction: 'manipulation',
@@ -649,7 +649,7 @@ function ThanksScreen({ quiz, lang, onRestart }: ThanksScreenProps) {
 
   return (
     <div
-      className="min-h-screen flex flex-col items-center justify-center bg-background px-6 gap-8"
+      className="min-h-screen overflow-y-auto flex flex-col items-center justify-center bg-background px-6 py-8 gap-8"
       onClick={onRestart}
     >
       <div

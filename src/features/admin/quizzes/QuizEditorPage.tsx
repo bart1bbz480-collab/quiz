@@ -766,7 +766,11 @@ export function QuizEditorPage() {
     thanks_text_nl: draft.thanks_text_nl,
     thanks_text_fr: draft.thanks_text_fr,
     thanks_text_en: draft.thanks_text_en,
-    thanks_image_path: draft.thanks_image_path,
+    thanks_image_url: draft._localThanksImageFile
+      ? URL.createObjectURL(draft._localThanksImageFile)
+      : draft.thanks_image_path
+        ? getPublicImageUrl(draft.thanks_image_path)
+        : null,
     campaign_url: draft.campaign_url,
     questions: draft.questions.map((q) => ({
       type: q.type,

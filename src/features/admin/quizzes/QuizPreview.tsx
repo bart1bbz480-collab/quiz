@@ -11,7 +11,7 @@ export interface PreviewData {
   thanks_text_nl: string
   thanks_text_fr: string
   thanks_text_en: string
-  thanks_image_path: string | null
+  thanks_image_url: string | null
   campaign_url: string
   questions: Array<{
     type: QuestionType
@@ -224,9 +224,9 @@ export function QuizPreview({ data }: { data: PreviewData }) {
         {/* ── Bedankpagina ── */}
         {isThanksPage && lang !== null && (
           <div className="p-8 flex flex-col items-center gap-6 text-center">
-            {data.thanks_image_path && (
+            {data.thanks_image_url && (
               <img
-                src={getPublicImageUrl(data.thanks_image_path)}
+                src={data.thanks_image_url}
                 alt="Bedankafbeelding"
                 className="w-full max-h-56 object-cover rounded-lg border border-border"
               />
