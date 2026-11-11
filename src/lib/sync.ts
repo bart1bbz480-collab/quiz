@@ -43,11 +43,19 @@ export async function syncQueue(): Promise<{ synced: number; failed: number }> {
   let synced = 0
   let failed = 0
 
+  const MAX_ATTEMPTS = 5
+
   try {
     const queue = await getQueue()
     if (queue.length === 0) return { synced: 0, failed: 0 }
 
     for (const item of queue) {
+      // Permanent mislukt: verwijder item na te veel pogingen
+      if (item.attempts >= MAX_ATTEMPTS) {
+        await removeFromQueue(item.id)
+        continue
+      }
+
       try {
         const { error } = await supabase.rpc('submit_interview', {
           payload: item.payload,

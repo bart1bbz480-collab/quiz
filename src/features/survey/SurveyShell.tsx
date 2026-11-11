@@ -4,7 +4,8 @@ import { X } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/toast'
-import { getActiveQuiz, getCachedImage } from '@/lib/db'
+import { getActiveQuiz, saveActiveQuiz, getCachedImage } from '@/lib/db'
+import { supabase } from '@/lib/supabase'
 import { submitInterview } from '@/lib/sync'
 import { t, languageLabels, languageFlags } from '@/i18n'
 import type { Quiz, Question, Option, Language, InterviewPayload } from '@/types'
@@ -137,19 +138,35 @@ export function SurveyShell() {
   // ─── Quiz laden bij mount ───────────────────────────────────────────────────
 
   useEffect(() => {
-    getActiveQuiz()
-      .then((quiz) => {
-        if (!quiz) {
-          setLoadError(true)
-          setState((s) => ({ ...s, loading: false }))
-        } else {
-          setState((s) => ({ ...s, quiz, loading: false }))
+    async function loadQuiz() {
+      // Eerst cache proberen
+      let quiz = await getActiveQuiz()
+
+      // Cache leeg en online: direct van netwerk ophalen
+      if (!quiz && navigator.onLine) {
+        try {
+          const { data } = await supabase.rpc('get_active_quiz')
+          if (data) {
+            quiz = data as Quiz
+            await saveActiveQuiz(quiz)
+          }
+        } catch {
+          // netwerk mislukt, quiz blijft null
         }
-      })
-      .catch(() => {
+      }
+
+      if (!quiz) {
         setLoadError(true)
         setState((s) => ({ ...s, loading: false }))
-      })
+      } else {
+        setState((s) => ({ ...s, quiz, loading: false }))
+      }
+    }
+
+    loadQuiz().catch(() => {
+      setLoadError(true)
+      setState((s) => ({ ...s, loading: false }))
+    })
   }, [])
 
   // ─── Wake Lock beheer bij stap 'question' ──────────────────────────────────
