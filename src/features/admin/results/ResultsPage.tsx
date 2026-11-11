@@ -148,7 +148,7 @@ function QuestionCard({ question }: { question: QuestionResult }) {
                     cx="50%"
                     cy="50%"
                     outerRadius={80}
-                    label={({ name, pct }) => `${name} ${pct.toFixed(1)}%`}
+                    label={(props) => `${props.name} ${typeof props.pct === 'number' ? props.pct.toFixed(1) : 0}%`}
                     labelLine={false}
                   >
                     {chartData.map((_, i) => (
