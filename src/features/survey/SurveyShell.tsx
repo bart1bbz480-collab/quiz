@@ -649,39 +649,41 @@ function ThanksScreen({ quiz, lang, onRestart }: ThanksScreenProps) {
 
   return (
     <div
-      className="min-h-screen overflow-y-auto flex flex-col items-center justify-center bg-background px-6 py-8 gap-8"
+      className="min-h-screen flex flex-col items-center justify-center bg-background px-6 py-8 gap-6"
       onClick={onRestart}
     >
       <div
-        className="flex flex-col items-center gap-6 w-full max-w-sm"
+        className="flex flex-col items-center gap-6 w-full max-w-sm landscape:max-w-3xl"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Bedankafbeelding */}
-        {thanksImageUrl && (
-          <div className="w-full rounded-2xl overflow-hidden max-h-56">
-            <img
-              src={thanksImageUrl}
-              alt=""
-              className="w-full h-full object-cover"
-              draggable={false}
-            />
-          </div>
-        )}
-
         {/* Bedanktekst */}
         <p className="text-2xl font-semibold text-center text-foreground leading-snug">
           {getThanksText(quiz, lang)}
         </p>
 
-        {/* QR-code */}
-        {quiz.campaign_url && (
-          <div className="flex flex-col items-center gap-3">
-            <p className="text-sm text-muted-foreground text-center">
-              {t(lang, 'scanQr')}
-            </p>
-            <div className="p-3 bg-white rounded-xl shadow-sm border border-border">
-              <QRCodeSVG value={quiz.campaign_url} size={180} />
-            </div>
+        {/* Foto + QR naast elkaar in landscape, gestapeld in portrait */}
+        {(thanksImageUrl || quiz.campaign_url) && (
+          <div className="flex flex-col landscape:flex-row items-center justify-center gap-6 w-full">
+            {thanksImageUrl && (
+              <div className="w-full landscape:flex-1 rounded-2xl overflow-hidden max-h-48 landscape:max-h-56">
+                <img
+                  src={thanksImageUrl}
+                  alt=""
+                  className="w-full h-full object-cover"
+                  draggable={false}
+                />
+              </div>
+            )}
+            {quiz.campaign_url && (
+              <div className="flex flex-col items-center gap-3 flex-shrink-0">
+                <p className="text-sm text-muted-foreground text-center">
+                  {t(lang, 'scanQr')}
+                </p>
+                <div className="p-3 bg-white rounded-xl shadow-sm border border-border">
+                  <QRCodeSVG value={quiz.campaign_url} size={160} />
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -696,7 +698,7 @@ function ThanksScreen({ quiz, lang, onRestart }: ThanksScreenProps) {
       </div>
 
       {/* Tik-hint */}
-      <p className="text-xs text-muted-foreground/60 text-center select-none">
+      <p className="landscape:hidden text-xs text-muted-foreground/60 text-center select-none">
         {lang === 'nl' && 'Tik ergens om de volgende deelnemer te starten'}
         {lang === 'fr' && 'Touchez n\'importe où pour démarrer le prochain participant'}
         {lang === 'en' && 'Tap anywhere to start the next participant'}

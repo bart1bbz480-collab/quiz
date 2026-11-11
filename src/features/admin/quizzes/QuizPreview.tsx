@@ -223,25 +223,29 @@ export function QuizPreview({ data }: { data: PreviewData }) {
 
         {/* ── Bedankpagina ── */}
         {isThanksPage && lang !== null && (
-          <div className="p-8 flex flex-col items-center gap-6 text-center">
-            {data.thanks_image_url && (
-              <img
-                src={data.thanks_image_url}
-                alt="Bedankafbeelding"
-                className="w-full max-h-56 object-cover rounded-lg border border-border"
-              />
-            )}
+          <div className="p-6 flex flex-col items-center gap-5 text-center">
             <p className="text-base font-medium leading-relaxed whitespace-pre-line">
               {t(data.thanks_text_nl, data.thanks_text_fr, data.thanks_text_en, lang) ||
                 <span className="text-muted-foreground italic">Geen bedanktekst ingevoerd</span>
               }
             </p>
-            {data.campaign_url && (
-              <div className="flex flex-col items-center gap-2">
-                <p className="text-sm text-muted-foreground">Scan de QR-code</p>
-                <div className="p-3 bg-white rounded-xl shadow-sm border border-border">
-                  <QRCodeSVG value={data.campaign_url} size={160} />
-                </div>
+            {(data.thanks_image_url || data.campaign_url) && (
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-5 w-full">
+                {data.thanks_image_url && (
+                  <img
+                    src={data.thanks_image_url}
+                    alt="Bedankafbeelding"
+                    className="w-full sm:flex-1 max-h-44 object-cover rounded-lg border border-border"
+                  />
+                )}
+                {data.campaign_url && (
+                  <div className="flex flex-col items-center gap-2 flex-shrink-0">
+                    <p className="text-sm text-muted-foreground">Scan de QR-code</p>
+                    <div className="p-3 bg-white rounded-xl shadow-sm border border-border">
+                      <QRCodeSVG value={data.campaign_url} size={130} />
+                    </div>
+                  </div>
+                )}
               </div>
             )}
             <Button type="button" onClick={reset}>
