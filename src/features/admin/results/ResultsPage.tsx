@@ -240,15 +240,18 @@ export function ResultsPage() {
     if (!quizId) return
 
     try {
-      const [quizRes, interviewRes, resultsRes] = await Promise.all([
+      const [quizRes, interviewRes, resultsRes, questionsRes] = await Promise.all([
         supabase.from('quizzes').select('id, title, version, include_aborted').eq('id', quizId).single(),
         supabase.from('interviews').select('id, status, language, started_at, ended_at, interviewer_id').eq('quiz_id', quizId),
         supabase.rpc('quiz_results', { quiz_id: quizId, include_aborted: currentIncludeAborted }),
+        supabase.from('questions').select('id, type').eq('quiz_id', quizId),
       ])
 
       if (quizRes.error) throw new Error(quizRes.error.message)
       if (interviewRes.error) throw new Error(interviewRes.error.message)
       if (resultsRes.error) throw new Error(resultsRes.error.message)
+
+      const questionTypes = new Map((questionsRes.data ?? []).map((q) => [q.id, q.type]))
 
       setMeta(quizRes.data)
 
@@ -268,7 +271,7 @@ export function ResultsPage() {
       })
 
       // Resultaten
-      setResults(calculateResults(resultsRes.data as QuizResultRow[]))
+      setResults(calculateResults(resultsRes.data as QuizResultRow[], questionTypes))
 
       // Ranking: interviewer_id ophalen en koppelen aan naam
       const interviewerIds = [...new Set(interviews.map((i) => i.interviewer_id))]
