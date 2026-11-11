@@ -360,8 +360,8 @@ grant execute on function public.duplicate_quiz(uuid) to authenticated;
 -- ─── quiz_results ─────────────────────────────────────────────────────────────
 
 create or replace function public.quiz_results(
-  p_quiz_id       uuid,
-  p_include_aborted boolean default false
+  quiz_id         uuid,
+  include_aborted boolean default false
 )
 returns table (
   question_id       uuid,
@@ -380,8 +380,8 @@ stable
 as $$
   with valid_interviews as (
     select id from public.interviews
-    where quiz_id = p_quiz_id
-      and (status = 'completed' or (p_include_aborted and status = 'aborted'))
+    where quiz_id = quiz_results.quiz_id
+      and (status = 'completed' or (quiz_results.include_aborted and status = 'aborted'))
   ),
   option_counts as (
     select
@@ -412,7 +412,7 @@ as $$
   join public.options o on o.question_id = q.id
   left join option_counts oc on oc.question_id = q.id and oc.option_id = o.id
   left join question_totals qt on qt.question_id = q.id
-  where q.quiz_id = p_quiz_id
+  where q.quiz_id = quiz_results.quiz_id
   order by q.position, o.position;
 $$;
 
