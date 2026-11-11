@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowUp, ArrowDown, Trash2, Plus, Image, X, Lock } from 'lucide-react'
+import { ArrowUp, ArrowDown, Trash2, Plus, Image, X, Lock, Languages } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -515,6 +515,7 @@ export function QuizEditorPage() {
 
   const [draft, setDraft] = useState<QuizDraft>(emptyDraft)
   const [saving, setSaving] = useState(false)
+  const [translatingThanks, setTranslatingThanks] = useState(false)
 
   const isNew = !id || id === 'new'
 
@@ -572,6 +573,22 @@ export function QuizEditorPage() {
     draft.questions.filter((q) =>
       lang === 'fr' ? q.text_fr.trim() !== '' : q.text_en.trim() !== ''
     ).length
+
+  const translateThanks = async () => {
+    if (!draft.thanks_text_nl.trim()) return
+    setTranslatingThanks(true)
+    try {
+      const [fr, en] = await Promise.all([
+        draft.thanks_text_fr.trim() ? Promise.resolve(draft.thanks_text_fr) : translate(draft.thanks_text_nl, 'nl|fr'),
+        draft.thanks_text_en.trim() ? Promise.resolve(draft.thanks_text_en) : translate(draft.thanks_text_nl, 'nl|en'),
+      ])
+      setDraft((d) => ({ ...d, thanks_text_fr: fr, thanks_text_en: en }))
+    } catch (e) {
+      toast({ title: 'Vertaling mislukt', description: (e as Error).message, variant: 'destructive' })
+    } finally {
+      setTranslatingThanks(false)
+    }
+  }
 
   const saveDraft = async () => {
     if (!draft.title.trim()) {
@@ -908,7 +925,19 @@ export function QuizEditorPage() {
         <TabsContent value="thanks">
           <div className="space-y-5">
             <div>
-              <Label className="mb-1.5 block">Bedanktekst NL</Label>
+              <div className="flex items-center justify-between mb-1.5">
+                <Label>Bedanktekst NL</Label>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  disabled={!draft.thanks_text_nl.trim() || translatingThanks}
+                  onClick={translateThanks}
+                >
+                  <Languages className="h-3.5 w-3.5 mr-1" />
+                  {translatingThanks ? 'Bezig…' : 'Vertaal NL → FR/EN'}
+                </Button>
+              </div>
               <Textarea
                 placeholder="Dank u voor uw deelname!"
                 value={draft.thanks_text_nl}
