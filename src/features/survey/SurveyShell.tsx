@@ -10,17 +10,22 @@ import { t, languageLabels, languageFlags } from '@/i18n'
 import type { Quiz, Question, Option, Language, InterviewPayload } from '@/types'
 import { ABORT_HOLD_MS, ANSWER_FEEDBACK_MS } from '@/types'
 
-// ─── Vaste opties voor ja/nee/weet ik niet ────────────────────────────────────
+// ─── Vaste labels voor ja/nee/weet ik niet (per positie) ─────────────────────
 
-const FIXED_YES_NO: Option[] = [
-  { id: 'yn-1', question_id: '', position: 1, label_nl: 'Ja',           label_fr: 'Oui', label_en: 'Yes',          image_path: null },
-  { id: 'yn-2', question_id: '', position: 2, label_nl: 'Nee',          label_fr: 'Non', label_en: 'No',           image_path: null },
-  { id: 'yn-3', question_id: '', position: 3, label_nl: 'Weet ik niet', label_fr: 'Je ne sais pas', label_en: "I don't know", image_path: null },
-]
+const YES_NO_LABELS: Record<number, { nl: string; fr: string; en: string }> = {
+  1: { nl: 'Ja',           fr: 'Oui',           en: 'Yes' },
+  2: { nl: 'Nee',          fr: 'Non',            en: 'No' },
+  3: { nl: 'Weet ik niet', fr: 'Je ne sais pas', en: "I don't know" },
+}
 
 function getQuestionOptions(question: Question): Option[] {
-  if (question.type === 'yes_no_unknown') return FIXED_YES_NO
-  return question.options
+  if (question.type !== 'yes_no_unknown') return question.options
+  // Bewaar de echte option-IDs (nodig voor synchronisatie), vervang enkel de labels
+  return question.options.map((o) => {
+    const fixed = YES_NO_LABELS[o.position]
+    if (!fixed) return o
+    return { ...o, label_nl: fixed.nl, label_fr: fixed.fr, label_en: fixed.en }
+  })
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────
