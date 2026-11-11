@@ -143,7 +143,7 @@ export function QuizListPage() {
                     <span className="hidden sm:inline ml-1">Dupliceren</span>
                   </Button>
 
-                  {quiz.status === 'draft' && !quiz.is_locked && (
+                  {quiz.status !== 'active' && (
                     <Button size="sm" variant="ghost" onClick={() => setConfirmDelete(quiz)}>
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
@@ -180,13 +180,19 @@ export function QuizListPage() {
           <DialogHeader>
             <DialogTitle>Vragenlijst verwijderen</DialogTitle>
             <DialogDescription>
-              Wil je "{confirmDelete?.title}" definitief verwijderen? Dit kan niet ongedaan gemaakt worden.
+              Wil je <strong>"{confirmDelete?.title}"</strong> definitief verwijderen?
+              {confirmDelete?.is_locked && (
+                <span className="block mt-2 text-destructive font-medium">
+                  Let op: deze vragenlijst heeft enquêtedata. Alle antwoorden worden ook permanent verwijderd.
+                </span>
+              )}
+              {!confirmDelete?.is_locked && ' Dit kan niet ongedaan gemaakt worden.'}
             </DialogDescription>
           </DialogHeader>
           <div className="flex justify-end gap-2 mt-4">
             <Button variant="outline" onClick={() => setConfirmDelete(null)}>Annuleren</Button>
             <Button variant="destructive" onClick={() => confirmDelete && handleDelete(confirmDelete.id)}>
-              Verwijderen
+              Definitief verwijderen
             </Button>
           </div>
         </DialogContent>
