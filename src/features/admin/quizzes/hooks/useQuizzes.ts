@@ -66,7 +66,7 @@ export function useDuplicateQuiz() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (quizId: string) => {
-      const { data, error } = await supabase.rpc('duplicate_quiz', { quiz_id: quizId })
+      const { data, error } = await supabase.rpc('duplicate_quiz', { p_quiz_id: quizId })
       if (error) throw error
       return data as string
     },
