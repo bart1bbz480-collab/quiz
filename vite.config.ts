@@ -1,5 +1,6 @@
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
+import legacy from '@vitejs/plugin-legacy'
 import { defineConfig } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
 import { fileURLToPath } from 'url'
@@ -11,6 +12,9 @@ export default defineConfig({
   plugins: [
     react(),
     tailwindcss(),
+    legacy({
+      targets: ['safari >= 12', 'ios_saf >= 12'],
+    }),
     VitePWA({
       registerType: 'prompt',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'icons/*.png'],
@@ -44,6 +48,7 @@ export default defineConfig({
         ],
       },
       workbox: {
+        maximumFileSizeToCacheInBytes: 4 * 1024 * 1024, // 4 MB voor legacy bundle
         globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff2}'],
         runtimeCaching: [
           {
