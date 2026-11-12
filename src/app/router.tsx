@@ -2,8 +2,6 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 
 // Interviewer / survey zone
 import { LoginPage } from '@/features/auth/LoginPage'
-import { InstallPage } from '@/features/install/InstallPage'
-import { InterviewerHome } from '@/features/interviewer/InterviewerHome'
 import { SurveyShell } from '@/features/survey/SurveyShell'
 
 // Admin zone
@@ -22,8 +20,6 @@ export function AppRouter() {
       <Routes>
         {/* ── Interviewer zone ── */}
         <Route path="/" element={<LoginPage />} />
-        <Route path="/install" element={<InstallPage />} />
-        <Route path="/home" element={<InterviewerHome />} />
         <Route path="/survey/*" element={<SurveyShell />} />
 
         {/* ── Admin zone ── */}

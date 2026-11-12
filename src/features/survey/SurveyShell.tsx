@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { X } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
 import { Button } from '@/components/ui/button'
@@ -120,7 +119,6 @@ const INITIAL_STATE: SurveyState = {
 // ─── Hoofd-component ──────────────────────────────────────────────────────────
 
 export function SurveyShell() {
-  const navigate = useNavigate()
   const { toast } = useToast()
 
   const [state, setState] = useState<SurveyState>(INITIAL_STATE)
@@ -273,7 +271,7 @@ export function SurveyShell() {
   }
 
   const handleAbortFromLang = () => {
-    navigate('/home', { replace: true })
+    // Niets doen: op de taalkeuze-pagina is er geen vorige stap
   }
 
   // ─── Antwoord selecteren ───────────────────────────────────────────────────
@@ -355,11 +353,11 @@ export function SurveyShell() {
           lang,
           quiz: quiz ?? undefined,
         }).then(() => {
-          navigate('/home', { replace: true })
+          setState((s) => ({ ...INITIAL_STATE, quiz: s.quiz, loading: false, step: 'lang' }))
         })
       }
     }, 50)
-  }, [state, saveInterview, navigate])
+  }, [state, saveInterview])
 
   const handleAbortPointerUp = useCallback(() => {
     if (abortTimerRef.current) {
@@ -398,10 +396,10 @@ export function SurveyShell() {
           Geen actieve vragenlijst gevonden.
         </p>
         <p className="text-sm text-muted-foreground text-center max-w-xs">
-          Synchroniseer de app via het startscherm en probeer opnieuw.
+          Controleer de internetverbinding en probeer opnieuw.
         </p>
-        <Button variant="outline" onClick={() => navigate('/home', { replace: true })}>
-          Terug naar startscherm
+        <Button variant="outline" onClick={() => window.location.reload()}>
+          Opnieuw proberen
         </Button>
       </div>
     )
