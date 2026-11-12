@@ -22,7 +22,7 @@ export default defineConfig({
         name: 'Het Kan Anders',
         short_name: 'Het Kan Anders',
         description: 'Enquête-app voor de campagne Het Kan Anders',
-        theme_color: '#2563eb',
+        theme_color: '#214748',
         background_color: '#ffffff',
         display: 'standalone',
         start_url: '/',
