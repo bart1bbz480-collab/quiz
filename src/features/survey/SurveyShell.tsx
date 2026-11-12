@@ -717,7 +717,7 @@ function ThanksScreen({ quiz, lang, onRestart }: ThanksScreenProps) {
               <img
                 src={thanksImageUrl}
                 alt=""
-                className="w-full landscape:flex-1 rounded-2xl h-48 landscape:h-56 object-contain"
+                className="w-full landscape:flex-1 rounded-2xl object-contain max-h-[45vh] landscape:max-h-[55vh]"
                 draggable={false}
               />
             )}
