@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/toast'
 import { getActiveQuiz, saveActiveQuiz, getCachedImage } from '@/lib/db'
 import { supabase } from '@/lib/supabase'
+import { getPublicImageUrl } from '@/lib/image'
 import { submitInterview } from '@/lib/sync'
 import { t, languageLabels, languageFlags } from '@/i18n'
 import type { Quiz, Question, Option, Language, InterviewPayload } from '@/types'
@@ -91,6 +92,9 @@ function useBlobUrl(path: string | null): string | null {
       if (blob) {
         objectUrl = URL.createObjectURL(blob)
         setUrl(objectUrl)
+      } else {
+        // Niet gecached: gebruik publieke Supabase-URL als fallback
+        setUrl(getPublicImageUrl(path))
       }
     })
     return () => {
@@ -702,7 +706,7 @@ function ThanksScreen({ quiz, lang, onRestart }: ThanksScreenProps) {
               <img
                 src={thanksImageUrl}
                 alt=""
-                className="w-full landscape:flex-1 rounded-2xl max-h-56 landscape:max-h-64 object-contain"
+                className="w-full landscape:flex-1 rounded-2xl h-48 landscape:h-56 object-contain"
                 draggable={false}
               />
             )}
