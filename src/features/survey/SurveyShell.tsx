@@ -608,14 +608,12 @@ function QuestionScreen({
       <div className="flex-1 flex flex-col px-4 pb-4 gap-4 overflow-y-auto">
         {/* Vraagafbeelding */}
         {questionImageUrl && (
-          <div className="w-full rounded-xl overflow-hidden max-h-48">
-            <img
-              src={questionImageUrl}
-              alt=""
-              className="w-full h-full object-cover"
-              draggable={false}
-            />
-          </div>
+          <img
+            src={questionImageUrl}
+            alt=""
+            className="w-full rounded-xl object-contain max-h-[40vh]"
+            draggable={false}
+          />
         )}
 
         {/* Vraagtekst */}
