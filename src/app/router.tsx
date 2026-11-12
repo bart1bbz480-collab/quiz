@@ -11,8 +11,6 @@ import { AdminLayout } from '@/features/admin/AdminLayout'
 import { QuizListPage } from '@/features/admin/quizzes/QuizListPage'
 import { QuizEditorPage } from '@/features/admin/quizzes/QuizEditorPage'
 import { ResultsPage } from '@/features/admin/results/ResultsPage'
-import { InterviewersPage } from '@/features/admin/interviewers/InterviewersPage'
-import { SettingsPage } from '@/features/admin/settings/SettingsPage'
 
 export function AppRouter() {
   return (
@@ -39,8 +37,7 @@ export function AppRouter() {
             <Route path="quizzes/new" element={<QuizEditorPage />} />
             <Route path="quizzes/:id" element={<QuizEditorPage />} />
             <Route path="results/:quizId" element={<ResultsPage />} />
-            <Route path="interviewers" element={<InterviewersPage />} />
-            <Route path="settings" element={<SettingsPage />} />
+
             <Route index element={<Navigate to="quizzes" replace />} />
           </Route>
         </Route>

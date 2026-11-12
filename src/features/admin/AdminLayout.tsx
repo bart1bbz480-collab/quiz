@@ -6,8 +6,6 @@ import { useAdminAuth } from '@/features/auth/useAdminAuth'
 
 const navItems = [
   { to: '/admin/quizzes', label: 'Vragenlijsten' },
-  { to: '/admin/interviewers', label: 'Interviewers' },
-  { to: '/admin/settings', label: 'Instellingen' },
 ]
 
 export function AdminLayout() {

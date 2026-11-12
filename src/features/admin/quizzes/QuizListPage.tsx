@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, Edit, Play, Archive, Copy, BarChart2, Trash2 } from 'lucide-react'
+import { Plus, Edit, Play, Archive, Copy, BarChart2, Trash2, QrCode } from 'lucide-react'
+import { QRCodeSVG } from 'qrcode.react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
@@ -32,6 +33,8 @@ export function QuizListPage() {
 
   const [confirmActivate, setConfirmActivate] = useState<Quiz | null>(null)
   const [confirmDelete, setConfirmDelete] = useState<Quiz | null>(null)
+  const [showQr, setShowQr] = useState(false)
+  const quizUrl = typeof window !== 'undefined' ? window.location.origin : ''
 
   const handleActivate = async (quiz: Quiz) => {
     const hasActive = quizzes?.some((q) => q.status === 'active' && q.id !== quiz.id)
@@ -135,6 +138,13 @@ export function QuizListPage() {
                     </Button>
                   )}
 
+                  {quiz.status === 'active' && (
+                    <Button size="sm" variant="ghost" onClick={() => setShowQr(true)}>
+                      <QrCode className="h-4 w-4 text-primary" />
+                      <span className="hidden sm:inline ml-1">Deel</span>
+                    </Button>
+                  )}
+
                   <Button size="sm" variant="ghost" onClick={() => navigate(`/admin/results/${quiz.id}`)}>
                     <BarChart2 className="h-4 w-4" />
                     <span className="hidden sm:inline ml-1">Resultaten</span>
@@ -171,6 +181,34 @@ export function QuizListPage() {
             <Button variant="outline" onClick={() => setConfirmActivate(null)}>Annuleren</Button>
             <Button onClick={() => confirmActivate && doActivate(confirmActivate.id)}>
               Activeren
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* QR-code delen */}
+      <Dialog open={showQr} onOpenChange={setShowQr}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Quiz delen</DialogTitle>
+            <DialogDescription>
+              Scan de QR-code of deel de link om de quiz te starten.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col items-center gap-4 py-2">
+            <div className="p-4 bg-white rounded-xl border border-border shadow-sm">
+              <QRCodeSVG value={quizUrl} size={200} />
+            </div>
+            <p className="text-sm text-muted-foreground break-all text-center">{quizUrl}</p>
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => {
+                navigator.clipboard.writeText(quizUrl)
+                toast({ title: 'Link gekopieerd', variant: 'success' })
+              }}
+            >
+              Kopieer link
             </Button>
           </div>
         </DialogContent>
