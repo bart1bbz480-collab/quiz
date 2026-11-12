@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/toast'
 import { getActiveQuiz, saveActiveQuiz, getCachedImage } from '@/lib/db'
 import { supabase } from '@/lib/supabase'
-import { getPublicImageUrl } from '@/lib/image'
+import { getPublicImageUrl, precacheQuizImages } from '@/lib/image'
 import { submitInterview } from '@/lib/sync'
 import { t, languageLabels, languageFlags } from '@/i18n'
 import type { Quiz, Question, Option, Language, InterviewPayload } from '@/types'
@@ -162,6 +162,17 @@ export function SurveyShell() {
         setState((s) => ({ ...s, loading: false }))
       } else {
         setState((s) => ({ ...s, quiz, loading: false }))
+        // Afbeeldingen op de achtergrond cachen voor offline gebruik
+        if (navigator.onLine) {
+          const imagePaths = [
+            quiz.thanks_image_path,
+            ...(quiz.questions ?? []).flatMap((q: Question) => [
+              q.image_path,
+              ...(q.options ?? []).map((o: Option) => o.image_path),
+            ]),
+          ]
+          void precacheQuizImages(imagePaths)
+        }
       }
     }
 
