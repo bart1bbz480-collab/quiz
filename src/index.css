@@ -43,6 +43,13 @@ body {
   color: #0f172a;
 }
 
+/* iOS PWA: invoervelden altijd interactief, ook als een ouder user-select: none heeft */
+input, textarea, select {
+  -webkit-user-select: text !important;
+  user-select: text !important;
+  touch-action: auto !important;
+}
+
 /* Enquête: geen tekstselectie, zoom, pull-to-refresh */
 .survey-active {
   user-select: none;
