@@ -19,9 +19,9 @@ export default defineConfig({
       registerType: 'prompt',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'icons/*.png'],
       manifest: {
-        name: 'Straatinterview Quiz',
-        short_name: 'Quiz',
-        description: 'Enquête-app voor marktonderzoek op straat',
+        name: 'Het Kan Anders',
+        short_name: 'Het Kan Anders',
+        description: 'Enquête-app voor de campagne Het Kan Anders',
         theme_color: '#2563eb',
         background_color: '#ffffff',
         display: 'standalone',
