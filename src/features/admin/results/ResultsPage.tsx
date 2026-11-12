@@ -31,11 +31,6 @@ interface SummaryStats {
   lang_en: number
 }
 
-interface InterviewerRank {
-  first_name: string
-  completed: number
-  aborted: number
-}
 
 // ─── Kleuren voor grafieken ───────────────────────────────────────────────────
 
@@ -169,52 +164,6 @@ function QuestionCard({ question }: { question: QuestionResult }) {
   )
 }
 
-// ─── InterviewerRanking ───────────────────────────────────────────────────────
-
-function InterviewerRanking({ ranking }: { ranking: InterviewerRank[] }) {
-  if (ranking.length === 0) return null
-
-  const chartData = ranking.map((r) => ({
-    name: r.first_name,
-    Afgewerkt: r.completed,
-    Afgebroken: r.aborted,
-  }))
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-base">Interviewers</CardTitle>
-      </CardHeader>
-      <CardContent className="pt-0">
-        <div className="mb-4 space-y-1.5">
-          {ranking.map((r, i) => (
-            <div key={r.first_name} className="flex items-center gap-3">
-              <span className="text-sm text-muted-foreground w-5 shrink-0">{i + 1}.</span>
-              <span className="text-sm flex-1">{r.first_name}</span>
-              <span className="text-sm font-medium tabular-nums">{r.completed}</span>
-              {r.aborted > 0 && (
-                <span className="text-xs text-muted-foreground tabular-nums">({r.aborted} afgebr.)</span>
-              )}
-            </div>
-          ))}
-        </div>
-
-        {ranking.length > 1 && (
-          <div className="h-40">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData} margin={{ top: 8, right: 8, left: -20, bottom: 0 }}>
-                <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-                <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
-                <Tooltip />
-                <Bar dataKey="Afgewerkt" fill={CHART_COLORS[0]} radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  )
-}
 
 // ─── ResultsPage ──────────────────────────────────────────────────────────────
 
@@ -225,7 +174,6 @@ export function ResultsPage() {
   const [meta, setMeta] = useState<QuizMeta | null>(null)
   const [summary, setSummary] = useState<SummaryStats | null>(null)
   const [results, setResults] = useState<QuestionResult[]>([])
-  const [ranking, setRanking] = useState<InterviewerRank[]>([])
   const [includeAborted, setIncludeAborted] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -242,7 +190,7 @@ export function ResultsPage() {
     try {
       const [quizRes, interviewRes, resultsRes, questionsRes] = await Promise.all([
         supabase.from('quizzes').select('id, title, version, include_aborted').eq('id', quizId).single(),
-        supabase.from('interviews').select('id, status, language, started_at, ended_at, interviewer_id').eq('quiz_id', quizId),
+        supabase.from('interviews').select('id, status, language, started_at, ended_at').eq('quiz_id', quizId),
         supabase.rpc('quiz_results', { quiz_id: quizId, include_aborted: currentIncludeAborted }),
         supabase.from('questions').select('id, type').eq('quiz_id', quizId),
       ])
@@ -273,32 +221,6 @@ export function ResultsPage() {
       // Resultaten
       setResults(calculateResults(resultsRes.data as QuizResultRow[], questionTypes))
 
-      // Ranking: interviewer_id ophalen en koppelen aan naam
-      const interviewerIds = [...new Set(interviews.map((i) => i.interviewer_id))]
-      if (interviewerIds.length > 0) {
-        const { data: interviewers } = await supabase
-          .from('interviewers')
-          .select('id, first_name')
-          .in('id', interviewerIds)
-
-        const nameMap = new Map((interviewers ?? []).map((iv) => [iv.id, iv.first_name]))
-
-        const rankMap = new Map<string, { completed: number; aborted: number }>()
-        for (const iv of interviews) {
-          const existing = rankMap.get(iv.interviewer_id) ?? { completed: 0, aborted: 0 }
-          if (iv.status === 'completed') existing.completed++
-          else existing.aborted++
-          rankMap.set(iv.interviewer_id, existing)
-        }
-
-        const rank: InterviewerRank[] = [...rankMap.entries()]
-          .map(([id, stats]) => ({ first_name: nameMap.get(id) ?? id, ...stats }))
-          .sort((a, b) => b.completed - a.completed)
-
-        setRanking(rank)
-      } else {
-        setRanking([])
-      }
 
       setLastRefreshed(new Date())
     } catch (err) {
@@ -486,7 +408,6 @@ export function ResultsPage() {
       )}
 
       {/* Interviewer-ranglijst */}
-      <InterviewerRanking ranking={ranking} />
 
       {/* Laatste verversing */}
       <p className="text-xs text-muted-foreground text-center">
