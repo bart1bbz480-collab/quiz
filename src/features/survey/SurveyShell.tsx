@@ -295,10 +295,6 @@ export function SurveyShell() {
     }))
   }
 
-  const handleAbortFromLang = () => {
-    // Niets doen: op de taalkeuze-pagina is er geen vorige stap
-  }
-
   // ─── Antwoord selecteren ───────────────────────────────────────────────────
 
   const handleSelectOption = useCallback(
@@ -441,17 +437,6 @@ export function SurveyShell() {
 
     return (
       <div className="min-h-screen overflow-y-auto flex flex-col bg-background">
-        {/* Discrete terug-knop linksboven */}
-        <div className="p-4">
-          <button
-            onClick={handleAbortFromLang}
-            className="p-1.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-            aria-label="Terug naar startscherm"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-
         <div className="flex-1 flex flex-col items-center justify-center gap-8 px-6 py-4">
           <h1 className="text-2xl font-semibold text-center text-foreground">
             {t('nl', 'chooseLanguage')} / {t('fr', 'chooseLanguage')} / {t('en', 'chooseLanguage')}
