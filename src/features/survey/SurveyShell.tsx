@@ -141,21 +141,31 @@ export function SurveyShell() {
 
   useEffect(() => {
     async function loadQuiz() {
-      // Eerst cache proberen
-      let quiz = await getActiveQuiz()
-
-      // Cache leeg en online: direct van netwerk ophalen
-      if (!quiz && navigator.onLine) {
+      // Online: altijd de laatste versie van het netwerk ophalen
+      if (navigator.onLine) {
         try {
           const { data } = await supabase.rpc('get_active_quiz')
           if (data) {
-            quiz = data as Quiz
+            const quiz = data as Quiz
             await saveActiveQuiz(quiz)
+            setState((s) => ({ ...s, quiz, loading: false }))
+            const imagePaths = [
+              quiz.thanks_image_path,
+              ...(quiz.questions ?? []).flatMap((q: Question) => [
+                q.image_path,
+                ...(q.options ?? []).map((o: Option) => o.image_path),
+              ]),
+            ]
+            void precacheQuizImages(imagePaths)
+            return
           }
         } catch {
-          // netwerk mislukt, quiz blijft null
+          // netwerk mislukt, val terug op cache
         }
       }
+
+      // Offline of netwerk mislukt: cache proberen
+      let quiz = await getActiveQuiz()
 
       if (!quiz) {
         setLoadError(true)

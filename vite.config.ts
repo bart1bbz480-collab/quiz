@@ -16,7 +16,7 @@ export default defineConfig({
       targets: ['safari >= 12', 'ios_saf >= 12'],
     }),
     VitePWA({
-      registerType: 'prompt',
+      registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'icons/*.png'],
       manifest: {
         name: 'Het Kan Anders',
