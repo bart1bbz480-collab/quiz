@@ -1,18 +1,52 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
+import { Pencil, Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
-import { getCurrentSession, incrementSession } from '@/lib/device'
+import { getCurrentSession, incrementSession, getDeviceId, getDeviceName, setDeviceName } from '@/lib/device'
+import { supabase } from '@/lib/supabase'
 
 export function LoginPage() {
   const navigate = useNavigate()
   const [sessionNum, setSessionNum] = useState(() => getCurrentSession())
   const [showResetDialog, setShowResetDialog] = useState(false)
 
+  const [deviceName, setDeviceNameState] = useState(() => getDeviceName() ?? '')
+  const [editingName, setEditingName] = useState(false)
+  const [draftName, setDraftName] = useState('')
+  const nameInputRef = useRef<HTMLInputElement>(null)
+
+  // Focus input when editing starts
+  useEffect(() => {
+    if (editingName) {
+      setDraftName(deviceName)
+      setTimeout(() => nameInputRef.current?.focus(), 50)
+    }
+  }, [editingName]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const handleResetSession = () => {
     const next = incrementSession()
     setSessionNum(next)
     setShowResetDialog(false)
+  }
+
+  const handleSaveName = async () => {
+    const trimmed = draftName.trim()
+    if (!trimmed) return
+    setDeviceName(trimmed)
+    setDeviceNameState(trimmed)
+    setEditingName(false)
+    // Sync naar Supabase
+    await supabase.from('device_names').upsert({
+      device_id: getDeviceId(),
+      name: trimmed,
+      updated_at: new Date().toISOString(),
+    })
+  }
+
+  const handleNameKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') void handleSaveName()
+    if (e.key === 'Escape') setEditingName(false)
   }
 
   return (
@@ -31,6 +65,38 @@ export function LoginPage() {
       >
         Start quiz
       </Button>
+
+      {/* Apparaatnaam */}
+      <div className="flex items-center gap-2">
+        {editingName ? (
+          <>
+            <input
+              ref={nameInputRef}
+              value={draftName}
+              onChange={(e) => setDraftName(e.target.value)}
+              onKeyDown={handleNameKeyDown}
+              onBlur={() => void handleSaveName()}
+              maxLength={40}
+              placeholder="Naam van dit apparaat"
+              className="text-sm border border-border rounded-md px-2 py-1 bg-background w-48 text-center"
+            />
+            <button
+              onMouseDown={(e) => { e.preventDefault(); void handleSaveName() }}
+              className="text-primary hover:text-primary/80 transition-colors"
+            >
+              <Check className="h-4 w-4" />
+            </button>
+          </>
+        ) : (
+          <button
+            onClick={() => setEditingName(true)}
+            className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors group"
+          >
+            <span>{deviceName || 'Apparaat benoemen'}</span>
+            <Pencil className="h-3.5 w-3.5 opacity-0 group-hover:opacity-60 transition-opacity" />
+          </button>
+        )}
+      </div>
 
       <button
         onClick={() => setShowResetDialog(true)}

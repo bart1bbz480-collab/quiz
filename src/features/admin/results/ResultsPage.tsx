@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, BarChart2, PieChart, RefreshCw, Smartphone } from 'lucide-react'
+import { ArrowLeft, BarChart2, Check, PieChart, Pencil, RefreshCw, Smartphone } from 'lucide-react'
 import {
   BarChart, Bar, PieChart as RechartsPie, Pie, Cell,
   XAxis, YAxis, Tooltip, ResponsiveContainer, LabelList,
@@ -240,6 +240,9 @@ export function ResultsPage() {
   const [results, setResults] = useState<QuestionResult[]>([])
   const [timeline, setTimeline] = useState<DayStat[]>([])
   const [deviceStats, setDeviceStats] = useState<DeviceStat[]>([])
+  const [deviceNames, setDeviceNames] = useState<Map<string, string>>(new Map())
+  const [editingDeviceId, setEditingDeviceId] = useState<string | null>(null)
+  const [draftDeviceName, setDraftDeviceName] = useState('')
   const [questionTypesRef] = useState(() => new Map<string, string>())
 
   const [filterDevice, setFilterDevice] = useState<string | null>(null)
@@ -312,7 +315,20 @@ export function ResultsPage() {
       setMeta(quizRes.data)
 
       const interviews = (interviewRes.data ?? []) as InterviewRow[]
-      setDeviceStats(buildDeviceStats(interviews))
+      const stats = buildDeviceStats(interviews)
+      setDeviceStats(stats)
+
+      // Apparaatnamen ophalen
+      const deviceIds = [...new Set(stats.map((d) => d.device_id).filter(Boolean))] as string[]
+      if (deviceIds.length > 0) {
+        const { data: namesData } = await supabase
+          .from('device_names')
+          .select('device_id, name')
+          .in('device_id', deviceIds)
+        if (namesData) {
+          setDeviceNames(new Map(namesData.map((r) => [r.device_id, r.name])))
+        }
+      }
 
       // Samenvatting + tijdlijn enkel over gefilterde interviews
       const filtered = applyFilter(interviews, devId, sesId)
@@ -385,7 +401,9 @@ export function ResultsPage() {
         seen.add(key)
         list.push({
           id: d.device_id,
-          label: d.device_id ? d.device_id.slice(0, 8) + '…' : 'Onbekend',
+          label: d.device_id
+            ? (deviceNames.get(d.device_id) ?? d.device_id.slice(0, 8) + '…')
+            : 'Onbekend',
         })
       }
     }
@@ -401,6 +419,18 @@ export function ResultsPage() {
         .sort((a, b) => a - b)
 
   const hasDeviceFilter = uniqueDevices.length > 1
+
+  const handleSaveDeviceName = async (deviceId: string) => {
+    const trimmed = draftDeviceName.trim()
+    if (!trimmed) { setEditingDeviceId(null); return }
+    await supabase.from('device_names').upsert({
+      device_id: deviceId,
+      name: trimmed,
+      updated_at: new Date().toISOString(),
+    })
+    setDeviceNames((prev) => new Map(prev).set(deviceId, trimmed))
+    setEditingDeviceId(null)
+  }
   const isFiltered = filterDevice !== null || filterSession !== null
 
   // ─── Render ─────────────────────────────────────────────────────────────────
@@ -606,8 +636,49 @@ export function ResultsPage() {
                           isActive ? 'bg-primary/10' : 'hover:bg-muted/50',
                         ].join(' ')}
                       >
-                        <td className="py-1.5 pr-3 font-mono text-xs text-muted-foreground">
-                          {d.device_id ? d.device_id.slice(0, 8) + '…' : 'Onbekend'}
+                        <td className="py-1.5 pr-3">
+                          {d.device_id && editingDeviceId === d.device_id ? (
+                            <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                              <input
+                                autoFocus
+                                value={draftDeviceName}
+                                onChange={(e) => setDraftDeviceName(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') void handleSaveDeviceName(d.device_id!)
+                                  if (e.key === 'Escape') setEditingDeviceId(null)
+                                }}
+                                onBlur={() => void handleSaveDeviceName(d.device_id!)}
+                                maxLength={40}
+                                className="text-xs border border-border rounded px-1.5 py-0.5 w-28 bg-background"
+                              />
+                              <button
+                                onMouseDown={(e) => { e.preventDefault(); void handleSaveDeviceName(d.device_id!) }}
+                                className="text-primary"
+                              >
+                                <Check className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-1 group/name">
+                              <span className={deviceNames.get(d.device_id ?? '') ? 'text-sm font-medium' : 'font-mono text-xs text-muted-foreground'}>
+                                {d.device_id
+                                  ? (deviceNames.get(d.device_id) ?? d.device_id.slice(0, 8) + '…')
+                                  : 'Onbekend'}
+                              </span>
+                              {d.device_id && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    setDraftDeviceName(deviceNames.get(d.device_id!) ?? '')
+                                    setEditingDeviceId(d.device_id!)
+                                  }}
+                                  className="opacity-0 group-hover/name:opacity-50 hover:!opacity-100 transition-opacity"
+                                >
+                                  <Pencil className="h-3 w-3" />
+                                </button>
+                              )}
+                            </div>
+                          )}
                         </td>
                         <td className="text-center py-1.5 px-2 tabular-nums">{d.session_id}</td>
                         <td className="py-1.5 px-2 text-xs text-muted-foreground whitespace-nowrap">
