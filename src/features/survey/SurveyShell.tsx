@@ -2,11 +2,13 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { X } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
 import { Button } from '@/components/ui/button'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { useToast } from '@/components/ui/toast'
 import { getActiveQuiz, saveActiveQuiz, getCachedImage } from '@/lib/db'
 import { supabase } from '@/lib/supabase'
 import { getPublicImageUrl, precacheQuizImages } from '@/lib/image'
 import { submitInterview } from '@/lib/sync'
+import { getDeviceId, getCurrentSession, incrementSession } from '@/lib/device'
 import { t, languageLabels, languageFlags } from '@/i18n'
 import type { Quiz, Question, Option, Language, InterviewPayload } from '@/types'
 import { ABORT_HOLD_MS, ANSWER_FEEDBACK_MS } from '@/types'
@@ -44,6 +46,8 @@ interface SurveyState {
   interviewId: string | null
   aborted: boolean
   abortedAtPosition: number | null
+  device_id: string
+  session_id: number
 }
 
 // ─── Kleine hulpfuncties ──────────────────────────────────────────────────────
@@ -118,6 +122,8 @@ const INITIAL_STATE: SurveyState = {
   interviewId: null,
   aborted: false,
   abortedAtPosition: null,
+  device_id: '',
+  session_id: 1,
 }
 
 // ─── Hoofd-component ──────────────────────────────────────────────────────────
@@ -128,6 +134,8 @@ export function SurveyShell() {
   const [state, setState] = useState<SurveyState>(INITIAL_STATE)
   const [selectedOptionId, setSelectedOptionId] = useState<string | null>(null)
   const [loadError, setLoadError] = useState(false)
+  const [sessionNum, setSessionNum] = useState(() => getCurrentSession())
+  const [showResetDialog, setShowResetDialog] = useState(false)
 
   // Abort hold state
   const [abortProgress, setAbortProgress] = useState(0) // 0–1
@@ -251,11 +259,11 @@ export function SurveyShell() {
   const saveInterview = useCallback(
     async (
       overrideState?: Partial<
-        Pick<SurveyState, 'answers' | 'aborted' | 'abortedAtPosition' | 'startedAt' | 'interviewId' | 'lang'>
+        Pick<SurveyState, 'answers' | 'aborted' | 'abortedAtPosition' | 'startedAt' | 'interviewId' | 'lang' | 'device_id' | 'session_id'>
       > & { quiz?: Quiz }
     ) => {
       const merged = { ...state, ...overrideState }
-      const { quiz, interviewId, startedAt, lang, answers, aborted, abortedAtPosition } = merged
+      const { quiz, interviewId, startedAt, lang, answers, aborted, abortedAtPosition, device_id, session_id } = merged
 
       if (!quiz || !interviewId || !startedAt) return
 
@@ -267,6 +275,8 @@ export function SurveyShell() {
         aborted_at_position: abortedAtPosition ?? null,
         started_at: startedAt,
         ended_at: new Date().toISOString(),
+        device_id: device_id || null,
+        session_id: session_id || 1,
         answers,
       }
 
@@ -292,7 +302,15 @@ export function SurveyShell() {
       startedAt: new Date().toISOString(),
       aborted: false,
       abortedAtPosition: null,
+      device_id: getDeviceId(),
+      session_id: getCurrentSession(),
     }))
+  }
+
+  const handleResetSession = () => {
+    const next = incrementSession()
+    setSessionNum(next)
+    setShowResetDialog(false)
   }
 
   // ─── Antwoord selecteren ───────────────────────────────────────────────────
@@ -436,26 +454,54 @@ export function SurveyShell() {
     )
 
     return (
-      <div className="min-h-screen overflow-y-auto flex flex-col bg-background">
-        <div className="flex-1 flex flex-col items-center justify-center gap-8 px-6 py-4">
-          <h1 className="text-2xl font-semibold text-center text-foreground">
-            {t('nl', 'chooseLanguage')} / {t('fr', 'chooseLanguage')} / {t('en', 'chooseLanguage')}
-          </h1>
+      <>
+        <div className="min-h-screen overflow-y-auto flex flex-col bg-background">
+          <div className="flex-1 flex flex-col items-center justify-center gap-8 px-6 py-4">
+            <h1 className="text-2xl font-semibold text-center text-foreground">
+              {t('nl', 'chooseLanguage')} / {t('fr', 'chooseLanguage')} / {t('en', 'chooseLanguage')}
+            </h1>
 
-          <div className="flex flex-col gap-4 w-full max-w-sm">
-            {availableLanguages.map((l) => (
-              <button
-                key={l}
-                onClick={() => handleSelectLanguage(l)}
-                className="flex items-center justify-center gap-4 w-full min-h-20 rounded-2xl border-2 border-border bg-card text-card-foreground text-xl font-semibold shadow-sm hover:bg-accent hover:border-primary active:scale-95 transition-all touch-manipulation select-none"
-              >
-                <span className="text-3xl">{languageFlags[l]}</span>
-                <span>{languageLabels[l]}</span>
-              </button>
-            ))}
+            <div className="flex flex-col gap-4 w-full max-w-sm">
+              {availableLanguages.map((l) => (
+                <button
+                  key={l}
+                  onClick={() => handleSelectLanguage(l)}
+                  className="flex items-center justify-center gap-4 w-full min-h-20 rounded-2xl border-2 border-border bg-card text-card-foreground text-xl font-semibold shadow-sm hover:bg-accent hover:border-primary active:scale-95 transition-all touch-manipulation select-none"
+                >
+                  <span className="text-3xl">{languageFlags[l]}</span>
+                  <span>{languageLabels[l]}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Sessie-indicator + reset */}
+          <div className="pb-6 flex justify-center">
+            <button
+              onClick={() => setShowResetDialog(true)}
+              className="text-xs text-muted-foreground/40 hover:text-muted-foreground/70 transition-colors select-none touch-manipulation"
+            >
+              Sessie {sessionNum} · Nieuw starten
+            </button>
           </div>
         </div>
-      </div>
+
+        <Dialog open={showResetDialog} onOpenChange={setShowResetDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Nieuwe sessie starten</DialogTitle>
+              <DialogDescription>
+                De teller op dit apparaat wordt op nul gezet. Alle vorige antwoorden
+                blijven bewaard en zijn zichtbaar in het admin-overzicht.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex justify-end gap-2 mt-4">
+              <Button variant="outline" onClick={() => setShowResetDialog(false)}>Annuleren</Button>
+              <Button onClick={handleResetSession}>Nieuwe sessie starten</Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </>
     )
   }
 

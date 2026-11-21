@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, BarChart2, PieChart, RefreshCw } from 'lucide-react'
+import { ArrowLeft, BarChart2, PieChart, RefreshCw, Smartphone } from 'lucide-react'
 import {
   BarChart, Bar, PieChart as RechartsPie, Pie, Cell,
   XAxis, YAxis, Tooltip, ResponsiveContainer, LabelList,
@@ -29,6 +29,68 @@ interface SummaryStats {
   lang_nl: number
   lang_fr: number
   lang_en: number
+}
+
+interface InterviewRow {
+  id: string
+  status: string
+  language: string
+  started_at: string
+  ended_at: string
+  device_id: string | null
+  session_id: number | null
+}
+
+interface DayStat {
+  label: string   // "DD/MM"
+  count: number
+}
+
+interface DeviceStat {
+  device_id: string | null
+  session_id: number
+  completed: number
+  aborted: number
+}
+
+function buildTimeline(interviews: InterviewRow[]): DayStat[] {
+  const counts: Record<string, number> = {}
+  for (const i of interviews) {
+    if (i.status !== 'completed') continue
+    const sortKey = i.started_at.slice(0, 10)
+    if (!counts[sortKey]) counts[sortKey] = 0
+    counts[sortKey]++
+  }
+  return Object.entries(counts)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([iso, count]) => {
+      const d = new Date(iso)
+      return {
+        label: `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`,
+        count,
+      }
+    })
+}
+
+function buildDeviceStats(interviews: InterviewRow[]): DeviceStat[] {
+  const map = new Map<string, DeviceStat>()
+  for (const i of interviews) {
+    const did = i.device_id ?? null
+    const sid = i.session_id ?? 1
+    const key = `${did ?? '__anon__'}__${sid}`
+    if (!map.has(key)) {
+      map.set(key, { device_id: did, session_id: sid, completed: 0, aborted: 0 })
+    }
+    const s = map.get(key)!
+    if (i.status === 'completed') s.completed++
+    else s.aborted++
+  }
+  return [...map.values()].sort((a, b) => {
+    const da = a.device_id ?? ''
+    const db = b.device_id ?? ''
+    if (da !== db) return da.localeCompare(db)
+    return a.session_id - b.session_id
+  })
 }
 
 
@@ -174,6 +236,8 @@ export function ResultsPage() {
   const [meta, setMeta] = useState<QuizMeta | null>(null)
   const [summary, setSummary] = useState<SummaryStats | null>(null)
   const [results, setResults] = useState<QuestionResult[]>([])
+  const [timeline, setTimeline] = useState<DayStat[]>([])
+  const [deviceStats, setDeviceStats] = useState<DeviceStat[]>([])
   const [includeAborted, setIncludeAborted] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -190,7 +254,7 @@ export function ResultsPage() {
     try {
       const [quizRes, interviewRes, resultsRes, questionsRes] = await Promise.all([
         supabase.from('quizzes').select('id, title, version, include_aborted').eq('id', quizId).single(),
-        supabase.from('interviews').select('id, status, language, started_at, ended_at').eq('quiz_id', quizId),
+        supabase.from('interviews').select('id, status, language, started_at, ended_at, device_id, session_id').eq('quiz_id', quizId),
         supabase.rpc('quiz_results', { quiz_id: quizId, include_aborted: currentIncludeAborted }),
         supabase.from('questions').select('id, type').eq('quiz_id', quizId),
       ])
@@ -204,7 +268,7 @@ export function ResultsPage() {
       setMeta(quizRes.data)
 
       // Samenvatting berekenen
-      const interviews = interviewRes.data ?? []
+      const interviews = (interviewRes.data ?? []) as InterviewRow[]
       const completed = interviews.filter((i) => i.status === 'completed').length
       const aborted = interviews.filter((i) => i.status === 'aborted').length
       const dates = interviews.map((i) => i.started_at).sort()
@@ -217,6 +281,9 @@ export function ResultsPage() {
         lang_fr: interviews.filter((i) => i.language === 'fr').length,
         lang_en: interviews.filter((i) => i.language === 'en').length,
       })
+
+      setTimeline(buildTimeline(interviews))
+      setDeviceStats(buildDeviceStats(interviews))
 
       // Resultaten
       setResults(calculateResults(resultsRes.data as QuizResultRow[], questionTypes))
@@ -355,6 +422,68 @@ export function ResultsPage() {
                 <p className="text-xs text-muted-foreground">EN</p>
               </div>
             )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Tijdlijn per dag */}
+      {timeline.length > 1 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <BarChart2 className="h-4 w-4" /> Afgewerkt per dag
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="h-40">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={timeline} margin={{ top: 12, right: 8, left: -24, bottom: 0 }}>
+                  <XAxis dataKey="label" tick={{ fontSize: 10 }} />
+                  <YAxis tick={{ fontSize: 10 }} allowDecimals={false} />
+                  <Tooltip formatter={(v) => [v, 'Afgewerkt']} />
+                  <Bar dataKey="count" fill="#2563eb" radius={[3, 3, 0, 0]}>
+                    <LabelList dataKey="count" position="top" style={{ fontSize: 10 }} />
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Per apparaat */}
+      {deviceStats.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <Smartphone className="h-4 w-4" /> Per apparaat
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b text-muted-foreground text-xs">
+                    <th className="text-left py-1.5 pr-3 font-medium">Apparaat</th>
+                    <th className="text-center py-1.5 px-2 font-medium">Sessie</th>
+                    <th className="text-right py-1.5 px-2 font-medium text-green-700">Afgewerkt</th>
+                    <th className="text-right py-1.5 pl-2 font-medium text-amber-700">Afgebroken</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {deviceStats.map((d, i) => (
+                    <tr key={i} className="border-b last:border-0">
+                      <td className="py-1.5 pr-3 font-mono text-xs text-muted-foreground">
+                        {d.device_id ? d.device_id.slice(0, 8) + '…' : 'Onbekend'}
+                      </td>
+                      <td className="text-center py-1.5 px-2 tabular-nums">{d.session_id}</td>
+                      <td className="text-right py-1.5 px-2 tabular-nums font-medium text-green-700">{d.completed}</td>
+                      <td className="text-right py-1.5 pl-2 tabular-nums text-amber-700">{d.aborted}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </CardContent>
         </Card>
       )}

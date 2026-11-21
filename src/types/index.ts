@@ -102,6 +102,8 @@ export const InterviewPayloadSchema = z.object({
   ended_at: z.string().datetime(),
   app_version: z.string().nullable(),
   user_agent: z.string().nullable(),
+  device_id: z.string().nullable(),
+  session_id: z.number().int(),
   answers: z.array(AnswerPayloadSchema),
 })
 
