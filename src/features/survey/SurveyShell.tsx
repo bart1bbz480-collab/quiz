@@ -3,13 +3,12 @@ import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, X } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
 import { Button } from '@/components/ui/button'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { useToast } from '@/components/ui/toast'
 import { getActiveQuiz, saveActiveQuiz, getCachedImage } from '@/lib/db'
 import { supabase } from '@/lib/supabase'
 import { getPublicImageUrl, precacheQuizImages } from '@/lib/image'
 import { submitInterview } from '@/lib/sync'
-import { getDeviceId, getCurrentSession, incrementSession } from '@/lib/device'
+import { getDeviceId, getCurrentSession } from '@/lib/device'
 import { t, languageLabels, languageFlags } from '@/i18n'
 import type { Quiz, Question, Option, Language, InterviewPayload } from '@/types'
 import { ABORT_HOLD_MS, ANSWER_FEEDBACK_MS } from '@/types'
@@ -136,8 +135,6 @@ export function SurveyShell() {
   const [state, setState] = useState<SurveyState>(INITIAL_STATE)
   const [selectedOptionId, setSelectedOptionId] = useState<string | null>(null)
   const [loadError, setLoadError] = useState(false)
-  const [sessionNum, setSessionNum] = useState(() => getCurrentSession())
-  const [showResetDialog, setShowResetDialog] = useState(false)
 
   // Abort hold state
   const [abortProgress, setAbortProgress] = useState(0) // 0–1
@@ -309,13 +306,7 @@ export function SurveyShell() {
     }))
   }
 
-  const handleResetSession = () => {
-    const next = incrementSession()
-    setSessionNum(next)
-    setShowResetDialog(false)
-  }
-
-  // ─── Antwoord selecteren ───────────────────────────────────────────────────
+// ─── Antwoord selecteren ───────────────────────────────────────────────────
 
   const handleSelectOption = useCallback(
     (option: Option) => {
@@ -456,65 +447,37 @@ export function SurveyShell() {
     )
 
     return (
-      <>
-        <div className="min-h-screen overflow-y-auto flex flex-col bg-background">
-          {/* Terugknop naar startscherm */}
-          <div className="px-4 pt-4">
-            <button
-              onClick={() => navigate('/')}
-              className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors touch-manipulation"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Terug
-            </button>
-          </div>
-
-          <div className="flex-1 flex flex-col items-center justify-center gap-8 px-6 py-4">
-            <h1 className="text-2xl font-semibold text-center text-foreground">
-              {t('nl', 'chooseLanguage')} / {t('fr', 'chooseLanguage')} / {t('en', 'chooseLanguage')}
-            </h1>
-
-            <div className="flex flex-col gap-4 w-full max-w-sm">
-              {availableLanguages.map((l) => (
-                <button
-                  key={l}
-                  onClick={() => handleSelectLanguage(l)}
-                  className="flex items-center justify-center gap-4 w-full min-h-20 rounded-2xl border-2 border-border bg-card text-card-foreground text-xl font-semibold shadow-sm hover:bg-accent hover:border-primary active:scale-95 transition-all touch-manipulation select-none"
-                >
-                  <span className="text-3xl">{languageFlags[l]}</span>
-                  <span>{languageLabels[l]}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Sessie-indicator + reset */}
-          <div className="pb-6 flex justify-center">
-            <button
-              onClick={() => setShowResetDialog(true)}
-              className="text-xs text-primary/60 hover:text-primary transition-colors select-none touch-manipulation"
-            >
-              Sessie {sessionNum} · Nieuw starten
-            </button>
-          </div>
+      <div className="min-h-screen overflow-y-auto flex flex-col bg-background">
+        {/* Terugknop naar startscherm */}
+        <div className="px-4 pt-4">
+          <button
+            onClick={() => navigate('/')}
+            className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors touch-manipulation"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Terug
+          </button>
         </div>
 
-        <Dialog open={showResetDialog} onOpenChange={setShowResetDialog}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Nieuwe sessie starten</DialogTitle>
-              <DialogDescription>
-                De teller op dit apparaat wordt op nul gezet. Alle vorige antwoorden
-                blijven bewaard en zijn zichtbaar in het admin-overzicht.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="flex justify-end gap-2 mt-4">
-              <Button variant="outline" onClick={() => setShowResetDialog(false)}>Annuleren</Button>
-              <Button onClick={handleResetSession}>Nieuwe sessie starten</Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-      </>
+        <div className="flex-1 flex flex-col items-center justify-center gap-8 px-6 py-4">
+          <h1 className="text-2xl font-semibold text-center text-foreground">
+            {t('nl', 'chooseLanguage')} / {t('fr', 'chooseLanguage')} / {t('en', 'chooseLanguage')}
+          </h1>
+
+          <div className="flex flex-col gap-4 w-full max-w-sm">
+            {availableLanguages.map((l) => (
+              <button
+                key={l}
+                onClick={() => handleSelectLanguage(l)}
+                className="flex items-center justify-center gap-4 w-full min-h-20 rounded-2xl border-2 border-border bg-card text-card-foreground text-xl font-semibold shadow-sm hover:bg-accent hover:border-primary active:scale-95 transition-all touch-manipulation select-none"
+              >
+                <span className="text-3xl">{languageFlags[l]}</span>
+                <span>{languageLabels[l]}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
     )
   }
 
