@@ -238,24 +238,65 @@ export function ResultsPage() {
   const [results, setResults] = useState<QuestionResult[]>([])
   const [timeline, setTimeline] = useState<DayStat[]>([])
   const [deviceStats, setDeviceStats] = useState<DeviceStat[]>([])
+  const [questionTypesRef] = useState(() => new Map<string, string>())
+
+  const [filterDevice, setFilterDevice] = useState<string | null>(null)
+  const [filterSession, setFilterSession] = useState<number | null>(null)
   const [includeAborted, setIncludeAborted] = useState(false)
+
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [refreshing, setRefreshing] = useState(false)
   const [lastRefreshed, setLastRefreshed] = useState<Date>(new Date())
 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  // Refs zodat de interval altijd de huidige filterwaarden gebruikt
+  const paramsRef = useRef({ includeAborted, filterDevice, filterSession })
+  useEffect(() => { paramsRef.current = { includeAborted, filterDevice, filterSession } },
+    [includeAborted, filterDevice, filterSession])
+
+  // ─── Hulpfunctie: samenvat + tijdlijn uit (gefilterde) interviews ────────────
+
+  function applyFilter(interviews: InterviewRow[], devId: string | null, sesId: number | null) {
+    return interviews.filter((i) =>
+      (devId === null || i.device_id === devId) &&
+      (sesId === null || (i.session_id ?? 1) === sesId)
+    )
+  }
+
+  function computeSummary(interviews: InterviewRow[]): SummaryStats {
+    const completed = interviews.filter((i) => i.status === 'completed').length
+    const aborted = interviews.filter((i) => i.status === 'aborted').length
+    const dates = interviews.map((i) => i.started_at).sort()
+    return {
+      completed,
+      aborted,
+      first_at: dates[0] ?? null,
+      last_at: dates[dates.length - 1] ?? null,
+      lang_nl: interviews.filter((i) => i.language === 'nl').length,
+      lang_fr: interviews.filter((i) => i.language === 'fr').length,
+      lang_en: interviews.filter((i) => i.language === 'en').length,
+    }
+  }
 
   // ─── Data ophalen ───────────────────────────────────────────────────────────
 
-  const fetchData = useCallback(async (currentIncludeAborted: boolean) => {
+  const fetchData = useCallback(async (
+    currentIncludeAborted: boolean,
+    devId: string | null,
+    sesId: number | null,
+  ) => {
     if (!quizId) return
-
     try {
       const [quizRes, interviewRes, resultsRes, questionsRes] = await Promise.all([
         supabase.from('quizzes').select('id, title, version, include_aborted').eq('id', quizId).single(),
         supabase.from('interviews').select('id, status, language, started_at, ended_at, device_id, session_id').eq('quiz_id', quizId),
-        supabase.rpc('quiz_results', { quiz_id: quizId, include_aborted: currentIncludeAborted }),
+        supabase.rpc('quiz_results', {
+          quiz_id: quizId,
+          include_aborted: currentIncludeAborted,
+          p_device_id: devId,
+          p_session_id: sesId,
+        }),
         supabase.from('questions').select('id, type').eq('quiz_id', quizId),
       ])
 
@@ -263,55 +304,48 @@ export function ResultsPage() {
       if (interviewRes.error) throw new Error(interviewRes.error.message)
       if (resultsRes.error) throw new Error(resultsRes.error.message)
 
-      const questionTypes = new Map((questionsRes.data ?? []).map((q) => [q.id, q.type]))
+      // Vraagtypen cachen (veranderen niet)
+      for (const q of questionsRes.data ?? []) questionTypesRef.set(q.id, q.type)
 
       setMeta(quizRes.data)
 
-      // Samenvatting berekenen
       const interviews = (interviewRes.data ?? []) as InterviewRow[]
-      const completed = interviews.filter((i) => i.status === 'completed').length
-      const aborted = interviews.filter((i) => i.status === 'aborted').length
-      const dates = interviews.map((i) => i.started_at).sort()
-      setSummary({
-        completed,
-        aborted,
-        first_at: dates[0] ?? null,
-        last_at: dates[dates.length - 1] ?? null,
-        lang_nl: interviews.filter((i) => i.language === 'nl').length,
-        lang_fr: interviews.filter((i) => i.language === 'fr').length,
-        lang_en: interviews.filter((i) => i.language === 'en').length,
-      })
-
-      setTimeline(buildTimeline(interviews))
       setDeviceStats(buildDeviceStats(interviews))
 
-      // Resultaten
-      setResults(calculateResults(resultsRes.data as QuizResultRow[], questionTypes))
+      // Samenvatting + tijdlijn enkel over gefilterde interviews
+      const filtered = applyFilter(interviews, devId, sesId)
+      setSummary(computeSummary(filtered))
+      setTimeline(buildTimeline(filtered))
 
-
+      setResults(calculateResults(resultsRes.data as QuizResultRow[], questionTypesRef))
       setLastRefreshed(new Date())
     } catch (err) {
       setError((err as Error).message)
     }
-  }, [quizId])
+  }, [quizId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ─── Initieel laden ─────────────────────────────────────────────────────────
 
+  const isFirstLoad = useRef(true)
   useEffect(() => {
-    setLoading(true)
-    fetchData(includeAborted).finally(() => setLoading(false))
-  }, [fetchData, includeAborted])
+    if (isFirstLoad.current) {
+      isFirstLoad.current = false
+      setLoading(true)
+      fetchData(includeAborted, filterDevice, filterSession).finally(() => setLoading(false))
+    } else {
+      void fetchData(includeAborted, filterDevice, filterSession)
+    }
+  }, [fetchData, includeAborted, filterDevice, filterSession])
 
   // ─── Auto-refresh elke 30 s ─────────────────────────────────────────────────
 
   useEffect(() => {
     intervalRef.current = setInterval(() => {
-      void fetchData(includeAborted)
+      const p = paramsRef.current
+      void fetchData(p.includeAborted, p.filterDevice, p.filterSession)
     }, 30_000)
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current)
-    }
-  }, [fetchData, includeAborted])
+    return () => { if (intervalRef.current) clearInterval(intervalRef.current) }
+  }, [fetchData])
 
   // ─── Toggle afgebroken + persisteren ────────────────────────────────────────
 
@@ -326,7 +360,8 @@ export function ResultsPage() {
 
   const handleRefresh = async () => {
     setRefreshing(true)
-    await fetchData(includeAborted)
+    const p = paramsRef.current
+    await fetchData(p.includeAborted, p.filterDevice, p.filterSession)
     setRefreshing(false)
   }
 
@@ -335,6 +370,36 @@ export function ResultsPage() {
   useEffect(() => {
     if (meta) setIncludeAborted(meta.include_aborted)
   }, [meta?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ─── Filter helpers ──────────────────────────────────────────────────────────
+
+  // Unieke apparaten (op volgorde van eerste verschijning)
+  const uniqueDevices = (() => {
+    const seen = new Set<string>()
+    const list: Array<{ id: string | null; label: string }> = []
+    for (const d of deviceStats) {
+      const key = d.device_id ?? '__null__'
+      if (!seen.has(key)) {
+        seen.add(key)
+        list.push({
+          id: d.device_id,
+          label: d.device_id ? d.device_id.slice(0, 8) + '…' : 'Onbekend',
+        })
+      }
+    }
+    return list
+  })()
+
+  // Sessies voor het gekozen apparaat
+  const sessionsForDevice = filterDevice === null
+    ? []
+    : deviceStats
+        .filter((d) => d.device_id === filterDevice)
+        .map((d) => d.session_id)
+        .sort((a, b) => a - b)
+
+  const hasDeviceFilter = uniqueDevices.length > 1
+  const isFiltered = filterDevice !== null || filterSession !== null
 
   // ─── Render ─────────────────────────────────────────────────────────────────
 
@@ -373,6 +438,54 @@ export function ResultsPage() {
           <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
         </Button>
       </div>
+
+      {/* Filter per apparaat / sessie */}
+      {hasDeviceFilter && (
+        <Card>
+          <CardContent className="p-4 flex flex-wrap items-center gap-3">
+            <Smartphone className="h-4 w-4 text-muted-foreground shrink-0" />
+            <div className="flex items-center gap-2">
+              <label className="text-xs text-muted-foreground">Apparaat</label>
+              <select
+                value={filterDevice ?? ''}
+                onChange={(e) => {
+                  setFilterDevice(e.target.value || null)
+                  setFilterSession(null)
+                }}
+                className="text-sm border border-border rounded-md px-2 py-1 bg-background"
+              >
+                <option value="">Alle apparaten</option>
+                {uniqueDevices.map((d) => (
+                  <option key={d.id ?? 'null'} value={d.id ?? ''}>{d.label}</option>
+                ))}
+              </select>
+            </div>
+            {filterDevice !== null && sessionsForDevice.length > 1 && (
+              <div className="flex items-center gap-2">
+                <label className="text-xs text-muted-foreground">Sessie</label>
+                <select
+                  value={filterSession ?? ''}
+                  onChange={(e) => setFilterSession(e.target.value ? Number(e.target.value) : null)}
+                  className="text-sm border border-border rounded-md px-2 py-1 bg-background"
+                >
+                  <option value="">Alle sessies</option>
+                  {sessionsForDevice.map((s) => (
+                    <option key={s} value={s}>Sessie {s}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+            {isFiltered && (
+              <button
+                onClick={() => { setFilterDevice(null); setFilterSession(null) }}
+                className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2"
+              >
+                Wis filter
+              </button>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Kerncijfers */}
       {summary && (
@@ -427,7 +540,7 @@ export function ResultsPage() {
       )}
 
       {/* Tijdlijn per dag */}
-      {timeline.length > 1 && (
+      {timeline.length > 0 && (
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
@@ -441,7 +554,7 @@ export function ResultsPage() {
                   <XAxis dataKey="label" tick={{ fontSize: 10 }} />
                   <YAxis tick={{ fontSize: 10 }} allowDecimals={false} />
                   <Tooltip formatter={(v) => [v, 'Afgewerkt']} />
-                  <Bar dataKey="count" fill="#2563eb" radius={[3, 3, 0, 0]}>
+                  <Bar dataKey="count" fill="var(--color-primary)" radius={[3, 3, 0, 0]}>
                     <LabelList dataKey="count" position="top" style={{ fontSize: 10 }} />
                   </Bar>
                 </BarChart>
@@ -451,7 +564,7 @@ export function ResultsPage() {
         </Card>
       )}
 
-      {/* Per apparaat */}
+      {/* Per apparaat — tabel, klikbaar als filter */}
       {deviceStats.length > 0 && (
         <Card>
           <CardHeader className="pb-2">
@@ -471,19 +584,40 @@ export function ResultsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {deviceStats.map((d, i) => (
-                    <tr key={i} className="border-b last:border-0">
-                      <td className="py-1.5 pr-3 font-mono text-xs text-muted-foreground">
-                        {d.device_id ? d.device_id.slice(0, 8) + '…' : 'Onbekend'}
-                      </td>
-                      <td className="text-center py-1.5 px-2 tabular-nums">{d.session_id}</td>
-                      <td className="text-right py-1.5 px-2 tabular-nums font-medium text-green-700">{d.completed}</td>
-                      <td className="text-right py-1.5 pl-2 tabular-nums text-amber-700">{d.aborted}</td>
-                    </tr>
-                  ))}
+                  {deviceStats.map((d, i) => {
+                    const isActive = filterDevice === d.device_id && filterSession === d.session_id
+                    return (
+                      <tr
+                        key={i}
+                        onClick={() => {
+                          if (isActive) {
+                            setFilterDevice(null)
+                            setFilterSession(null)
+                          } else {
+                            setFilterDevice(d.device_id)
+                            setFilterSession(d.session_id)
+                          }
+                        }}
+                        className={[
+                          'border-b last:border-0 cursor-pointer transition-colors',
+                          isActive ? 'bg-primary/10' : 'hover:bg-muted/50',
+                        ].join(' ')}
+                      >
+                        <td className="py-1.5 pr-3 font-mono text-xs text-muted-foreground">
+                          {d.device_id ? d.device_id.slice(0, 8) + '…' : 'Onbekend'}
+                        </td>
+                        <td className="text-center py-1.5 px-2 tabular-nums">{d.session_id}</td>
+                        <td className="text-right py-1.5 px-2 tabular-nums font-medium text-green-700">{d.completed}</td>
+                        <td className="text-right py-1.5 pl-2 tabular-nums text-amber-700">{d.aborted}</td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>
+            {hasDeviceFilter && (
+              <p className="text-xs text-muted-foreground mt-2">Tik op een rij om te filteren</p>
+            )}
           </CardContent>
         </Card>
       )}

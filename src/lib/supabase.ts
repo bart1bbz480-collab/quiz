@@ -57,7 +57,7 @@ export interface Database {
       set_access_code: { Args: { code: string }; Returns: void }
       activate_quiz: { Args: { quiz_id: string }; Returns: void }
       quiz_results: {
-        Args: { quiz_id: string; include_aborted: boolean }
+        Args: { quiz_id: string; include_aborted: boolean; p_device_id?: string | null; p_session_id?: number | null }
         Returns: QuizResultRow[]
       }
     }
