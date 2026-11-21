@@ -51,6 +51,7 @@ interface DeviceStat {
   session_id: number
   completed: number
   aborted: number
+  started_at: string | null
 }
 
 function buildTimeline(interviews: InterviewRow[]): DayStat[] {
@@ -79,11 +80,12 @@ function buildDeviceStats(interviews: InterviewRow[]): DeviceStat[] {
     const sid = i.session_id ?? 1
     const key = `${did ?? '__anon__'}__${sid}`
     if (!map.has(key)) {
-      map.set(key, { device_id: did, session_id: sid, completed: 0, aborted: 0 })
+      map.set(key, { device_id: did, session_id: sid, completed: 0, aborted: 0, started_at: i.started_at })
     }
     const s = map.get(key)!
     if (i.status === 'completed') s.completed++
     else s.aborted++
+    if (s.started_at === null || i.started_at < s.started_at) s.started_at = i.started_at
   }
   return [...map.values()].sort((a, b) => {
     const da = a.device_id ?? ''
@@ -579,6 +581,7 @@ export function ResultsPage() {
                   <tr className="border-b text-muted-foreground text-xs">
                     <th className="text-left py-1.5 pr-3 font-medium">Apparaat</th>
                     <th className="text-center py-1.5 px-2 font-medium">Sessie</th>
+                    <th className="text-left py-1.5 px-2 font-medium">Gestart</th>
                     <th className="text-right py-1.5 px-2 font-medium text-green-700">Afgewerkt</th>
                     <th className="text-right py-1.5 pl-2 font-medium text-amber-700">Afgebroken</th>
                   </tr>
@@ -607,6 +610,9 @@ export function ResultsPage() {
                           {d.device_id ? d.device_id.slice(0, 8) + '…' : 'Onbekend'}
                         </td>
                         <td className="text-center py-1.5 px-2 tabular-nums">{d.session_id}</td>
+                        <td className="py-1.5 px-2 text-xs text-muted-foreground whitespace-nowrap">
+                          {d.started_at ? formatDate(d.started_at) : '—'}
+                        </td>
                         <td className="text-right py-1.5 px-2 tabular-nums font-medium text-green-700">{d.completed}</td>
                         <td className="text-right py-1.5 pl-2 tabular-nums text-amber-700">{d.aborted}</td>
                       </tr>
