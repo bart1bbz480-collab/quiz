@@ -636,9 +636,9 @@ export function ResultsPage() {
                           isActive ? 'bg-primary/10' : 'hover:bg-muted/50',
                         ].join(' ')}
                       >
-                        <td className="py-1.5 pr-3">
+                        <td className="py-1.5 pr-3" onClick={(e) => e.stopPropagation()}>
                           {d.device_id && editingDeviceId === d.device_id ? (
-                            <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                            <div className="flex items-center gap-1">
                               <input
                                 autoFocus
                                 value={draftDeviceName}
@@ -647,19 +647,18 @@ export function ResultsPage() {
                                   if (e.key === 'Enter') void handleSaveDeviceName(d.device_id!)
                                   if (e.key === 'Escape') setEditingDeviceId(null)
                                 }}
-                                onBlur={() => void handleSaveDeviceName(d.device_id!)}
                                 maxLength={40}
                                 className="text-xs border border-border rounded px-1.5 py-0.5 w-28 bg-background"
                               />
                               <button
-                                onMouseDown={(e) => { e.preventDefault(); void handleSaveDeviceName(d.device_id!) }}
-                                className="text-primary"
+                                onClick={() => void handleSaveDeviceName(d.device_id!)}
+                                className="text-primary hover:text-primary/80"
                               >
                                 <Check className="h-3.5 w-3.5" />
                               </button>
                             </div>
                           ) : (
-                            <div className="flex items-center gap-1 group/name">
+                            <div className="flex items-center gap-1.5">
                               <span className={deviceNames.get(d.device_id ?? '') ? 'text-sm font-medium' : 'font-mono text-xs text-muted-foreground'}>
                                 {d.device_id
                                   ? (deviceNames.get(d.device_id) ?? d.device_id.slice(0, 8) + '…')
@@ -667,12 +666,11 @@ export function ResultsPage() {
                               </span>
                               {d.device_id && (
                                 <button
-                                  onClick={(e) => {
-                                    e.stopPropagation()
+                                  onClick={() => {
                                     setDraftDeviceName(deviceNames.get(d.device_id!) ?? '')
                                     setEditingDeviceId(d.device_id!)
                                   }}
-                                  className="opacity-0 group-hover/name:opacity-50 hover:!opacity-100 transition-opacity"
+                                  className="text-muted-foreground/50 hover:text-muted-foreground transition-colors shrink-0"
                                 >
                                   <Pencil className="h-3 w-3" />
                                 </button>
