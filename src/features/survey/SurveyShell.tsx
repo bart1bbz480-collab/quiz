@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { X } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { ArrowLeft, X } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
@@ -130,6 +131,7 @@ const INITIAL_STATE: SurveyState = {
 
 export function SurveyShell() {
   const { toast } = useToast()
+  const navigate = useNavigate()
 
   const [state, setState] = useState<SurveyState>(INITIAL_STATE)
   const [selectedOptionId, setSelectedOptionId] = useState<string | null>(null)
@@ -456,6 +458,17 @@ export function SurveyShell() {
     return (
       <>
         <div className="min-h-screen overflow-y-auto flex flex-col bg-background">
+          {/* Terugknop naar startscherm */}
+          <div className="px-4 pt-4">
+            <button
+              onClick={() => navigate('/')}
+              className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors touch-manipulation"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Terug
+            </button>
+          </div>
+
           <div className="flex-1 flex flex-col items-center justify-center gap-8 px-6 py-4">
             <h1 className="text-2xl font-semibold text-center text-foreground">
               {t('nl', 'chooseLanguage')} / {t('fr', 'chooseLanguage')} / {t('en', 'chooseLanguage')}
@@ -479,7 +492,7 @@ export function SurveyShell() {
           <div className="pb-6 flex justify-center">
             <button
               onClick={() => setShowResetDialog(true)}
-              className="text-xs text-muted-foreground/40 hover:text-muted-foreground/70 transition-colors select-none touch-manipulation"
+              className="text-xs text-primary/60 hover:text-primary transition-colors select-none touch-manipulation"
             >
               Sessie {sessionNum} · Nieuw starten
             </button>
